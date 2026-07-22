@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulação de Rendimento — Capital de Giro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{
+    --navy:#1E2761;
+    --gold:#C9A84C;
+    --bg:#0A0C1A;
+    --card:#12142A;
+    --card-border:#242850;
+    --text:#F2F1EC;
+    --text-dim:#9A9DBE;
+    --green:#4FD1A5;
+    --red:#E8797A;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'DM Sans', sans-serif;
+    padding:32px 20px 60px;
+    min-height:100vh;
+  }
+  .wrap{max-width:1100px;margin:0 auto;}
+  header{text-align:center;margin-bottom:32px;}
+  header .kicker{
+    color:var(--gold);
+    letter-spacing:3px;
+    font-size:12px;
+    text-transform:uppercase;
+    font-weight:700;
+    margin-bottom:10px;
+  }
+  header h1{
+    font-family:'Playfair Display', serif;
+    font-size:32px;
+    font-weight:700;
+    margin-bottom:8px;
+  }
+  header p{color:var(--text-dim);font-size:14px;max-width:640px;margin:0 auto;}
+
+  .controls{
+    background:var(--card);
+    border:1px solid var(--card-border);
+    border-radius:16px;
+    padding:24px;
+    margin-bottom:28px;
+    display:flex;
+    gap:24px;
+    flex-wrap:wrap;
+    align-items:flex-end;
+  }
+  .field{flex:1;min-width:200px;}
+  .field label{
+    display:block;
+    font-size:11px;
+    letter-spacing:1.5px;
+    text-transform:uppercase;
+    color:var(--text-dim);
+    margin-bottom:8px;
+    font-weight:700;
+  }
+  .field input{
+    width:100%;
+    background:#0D0F22;
+    border:1px solid var(--card-border);
+    border-radius:10px;
+    padding:12px 14px;
+    color:var(--text);
+    font-size:16px;
+    font-family:'DM Sans', sans-serif;
+    font-weight:700;
+  }
+  .field input:focus{outline:none;border-color:var(--gold);}
+  .horizon-group{display:flex;gap:8px;flex-wrap:wrap;}
+  .horizon-btn{
+    background:transparent;
+    border:1px solid var(--card-border);
+    color:var(--text-dim);
+    padding:10px 16px;
+    border-radius:10px;
+    cursor:pointer;
+    font-family:'DM Sans', sans-serif;
+    font-weight:700;
+    font-size:13px;
+    transition:all .15s;
+  }
+  .horizon-btn.active{
+    background:var(--gold);
+    border-color:var(--gold);
+    color:#0A0C1A;
+  }
+  .horizon-btn:hover:not(.active){border-color:var(--gold);color:var(--gold);}
+
+  .note{
+    background:rgba(201,168,76,0.08);
+    border:1px solid rgba(201,168,76,0.35);
+    border-radius:12px;
+    padding:14px 18px;
+    font-size:13px;
+    color:var(--text-dim);
+    margin-bottom:28px;
+    line-height:1.6;
+  }
+  .note strong{color:var(--gold);}
+
+  .cards{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(240px,1fr));
+    gap:16px;
+    margin-bottom:28px;
+  }
+  .card{
+    background:var(--card);
+    border:1px solid var(--card-border);
+    border-radius:16px;
+    padding:22px;
+    position:relative;
+    overflow:hidden;
+  }
+  .card::before{
+    content:'';
+    position:absolute;
+    top:0;left:0;right:0;height:3px;
+    background:linear-gradient(90deg, var(--gold), transparent);
+  }
+  .card .asset-name{
+    font-size:13px;
+    font-weight:700;
+    color:var(--text);
+    margin-bottom:4px;
+    line-height:1.3;
+  }
+  .card .asset-rate{
+    font-size:11px;
+    color:var(--gold);
+    font-weight:700;
+    margin-bottom:16px;
+  }
+  .card .metric-label{
+    font-size:10px;
+    letter-spacing:1px;
+    text-transform:uppercase;
+    color:var(--text-dim);
+    margin-top:12px;
+  }
+  .card .metric-value{
+    font-family:'Playfair Display', serif;
+    font-size:24px;
+    font-weight:700;
+    color:var(--text);
+  }
+  .card .metric-value.net{color:var(--green);}
+  .card .gain-tag{
+    display:inline-block;
+    margin-top:4px;
+    font-size:12px;
+    color:var(--green);
+    font-weight:700;
+  }
+
+  .chart-card{
+    background:var(--card);
+    border:1px solid var(--card-border);
+    border-radius:16px;
+    padding:24px;
+    margin-bottom:28px;
+  }
+  .chart-card h3{
+    font-family:'Playfair Display', serif;
+    font-size:18px;
+    margin-bottom:16px;
+    font-weight:700;
+  }
+  .chart-wrap{position:relative;height:340px;}
+
+  table{
+    width:100%;
+    border-collapse:collapse;
+    background:var(--card);
+    border:1px solid var(--card-border);
+    border-radius:16px;
+    overflow:hidden;
+  }
+  thead th{
+    background:#161933;
+    color:var(--gold);
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:1px;
+    padding:14px 16px;
+    text-align:left;
+    font-weight:700;
+  }
+  tbody td{
+    padding:14px 16px;
+    border-top:1px solid var(--card-border);
+    font-size:14px;
+  }
+  tbody tr:hover{background:rgba(201,168,76,0.04);}
+  td.num{text-align:right;font-weight:700;font-family:'DM Sans',sans-serif;}
+  td.net{color:var(--green);}
+  .asset-cell{font-weight:700;}
+  .asset-sub{display:block;font-size:11px;color:var(--text-dim);font-weight:400;margin-top:2px;}
+
+  footer{
+    text-align:center;
+    color:var(--text-dim);
+    font-size:11px;
+    margin-top:32px;
+    line-height:1.8;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="kicker">Grão · Grupo Primo — Simulação CFP</div>
+    <h1>Rendimento do Capital de Giro</h1>
+    <p>Comparativo entre 4 alternativas de aplicação para o excedente de caixa da empresa, com valores brutos e líquidos de Imposto de Renda.</p>
+  </header>
+
+  <div class="controls">
+    <div class="field">
+      <label for="aporte">Valor do aporte (R$)</label>
+      <input type="text" id="aporte" value="2.000.000">
+    </div>
+    <div class="field">
+      <label>Horizonte</label>
+      <div class="horizon-group" id="horizonGroup">
+        <button class="horizon-btn" data-m="12">12 meses</button>
+        <button class="horizon-btn active" data-m="24">24 meses</button>
+        <button class="horizon-btn" data-m="36">36 meses</button>
+        <button class="horizon-btn" data-m="60">60 meses</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="note">
+    <strong>Premissas usadas:</strong> CDI atual 14,15% a.a. e Selic Meta 14,25% a.a. (BACEN, jul/2026). Tesouro Selic direto considerado com taxa de custódia B3 de 0,20% a.a. As taxas dos fundos BTG e Empiricus são as informadas por você (rentabilidade dos últimos 12 meses), projetadas como constantes para os demais horizontes — <strong>é uma simplificação</strong>, rentabilidade passada não garante rentabilidade futura. IR do CDB e do Tesouro direto pela tabela regressiva completa (22,5% até 180 dias / 20% até 360 dias / 17,5% até 720 dias / 15% acima de 720 dias); IR dos fundos (BTG e Empiricus), por serem classificados como curto prazo, limitado a 2 faixas (22,5% até 180 dias / 20% acima disso, sem cair para 17,5% ou 15%). <strong>Atenção:</strong> o rendimento de 15,00% informado para o fundo Empiricus está acima do próprio CDI do período — vale confirmar a fonte desse número antes de usar em reunião com o cliente.
+  </div>
+
+  <div class="cards" id="cardsGrid"></div>
+
+  <div class="chart-card">
+    <h3>Evolução do valor líquido ao longo do tempo</h3>
+    <div class="chart-wrap"><canvas id="growthChart"></canvas></div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Ativo</th>
+        <th style="text-align:right">Taxa a.a.</th>
+        <th style="text-align:right">Valor Bruto</th>
+        <th style="text-align:right">IR estimado</th>
+        <th style="text-align:right">Valor Líquido</th>
+        <th style="text-align:right">Ganho Líquido</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+
+  <footer>
+    Simulação estimativa para fins de planejamento — não considera IOF regressivo em resgates antes de 30 dias, come-cotas semestral (aplicável apenas aos fundos) e eventuais taxas de administração/performance dos fundos.<br>
+    Grão | Grupo Primo — Metodologia Objetivo → Estratégia → Produto
+  </footer>
+</div>
+
+<script>
+const ASSETS = [
+  { name: "BTG Digital Tesouro Selic Simples FIRF", sub: "Fundo curto prazo · rent. 12m informada", rate: 0.1353, color: "#7FA6E8", fundoCP: true },
+  { name: "Empiricus Selic FI Renda Fixa Simples", sub: "Fundo curto prazo · rent. 12m informada", rate: 0.1500, color: "#C9A84C", fundoCP: true },
+  { name: "CDB 100% CDI", sub: "CDI atual 14,15% a.a.", rate: 0.1415, color: "#4FD1A5", fundoCP: false },
+  { name: "Tesouro Selic (direto)", sub: "Selic 14,25% a.a. − custódia B3 0,20%", rate: 0.1405, color: "#E8797A", fundoCP: false },
+];
+
+function parseAporte(str){
+  const clean = str.replace(/\./g,'').replace(',', '.').replace(/[^\d.]/g,'');
+  const v = parseFloat(clean);
+  return isNaN(v) ? 0 : v;
+}
+
+function fmtBRL(v){
+  return v.toLocaleString('pt-BR', {style:'currency', currency:'BRL', maximumFractionDigits:0});
+}
+
+function irAliquota(months, fundoCP){
+  const days = months * 30;
+  if (fundoCP){
+    // Fundos de curto prazo (carteira média ≤ 365 dias): apenas 2 faixas, nunca cai abaixo de 20%
+    return days <= 180 ? 0.225 : 0.20;
+  }
+  // Títulos (CDB, Tesouro direto) e fundos de longo prazo: tabela regressiva de 4 faixas
+  if (days <= 180) return 0.225;
+  if (days <= 360) return 0.20;
+  if (days <= 720) return 0.175;
+  return 0.15;
+}
+
+function compute(aporte, months){
+  const years = months / 12;
+  return ASSETS.map(a => {
+    const aliq = irAliquota(months, a.fundoCP);
+    const bruto = aporte * Math.pow(1 + a.rate, years);
+    const ganhoBruto = bruto - aporte;
+    const ir = ganhoBruto * aliq;
+    const liquido = bruto - ir;
+    const ganhoLiquido = liquido - aporte;
+    return {...a, bruto, ganhoBruto, ir, liquido, ganhoLiquido, aliq};
+  });
+}
+
+let currentMonths = 24;
+let chart;
+
+function render(){
+  const aporte = parseAporte(document.getElementById('aporte').value);
+  const results = compute(aporte, currentMonths);
+
+  // Cards
+  const cardsGrid = document.getElementById('cardsGrid');
+  cardsGrid.innerHTML = results.map(r => `
+    <div class="card">
+      <div class="asset-name">${r.name}</div>
+      <div class="asset-rate">${(r.rate*100).toFixed(2)}% a.a.</div>
+      <div class="metric-label">Valor líquido em ${currentMonths} meses</div>
+      <div class="metric-value net">${fmtBRL(r.liquido)}</div>
+      <div class="gain-tag">+ ${fmtBRL(r.ganhoLiquido)}</div>
+    </div>
+  `).join('');
+
+  // Table
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = results.map(r => `
+    <tr>
+      <td class="asset-cell">${r.name}<span class="asset-sub">${r.sub}</span></td>
+      <td class="num">${(r.rate*100).toFixed(2)}%</td>
+      <td class="num">${fmtBRL(r.bruto)}</td>
+      <td class="num">${fmtBRL(r.ir)} <span class="asset-sub" style="display:inline">(${(r.aliq*100).toFixed(1)}%)</span></td>
+      <td class="num net">${fmtBRL(r.liquido)}</td>
+      <td class="num net">${fmtBRL(r.ganhoLiquido)}</td>
+    </tr>
+  `).join('');
+
+  // Chart: evolution across 12/24/36/60 for each asset (net values)
+  const horizons = [12, 24, 36, 60];
+  const datasets = ASSETS.map(a => {
+    const data = horizons.map(m => {
+      const years = m/12;
+      const bruto = aporte * Math.pow(1 + a.rate, years);
+      const ganhoBruto = bruto - aporte;
+      const aliq = irAliquota(m, a.fundoCP);
+      const liquido = bruto - ganhoBruto*aliq;
+      return liquido;
+    });
+    return {
+      label: a.name,
+      data,
+      borderColor: a.color,
+      backgroundColor: a.color + '33',
+      tension: 0.3,
+      fill: false,
+      pointRadius: 4,
+      pointBackgroundColor: a.color,
+      borderWidth: 2.5,
+    };
+  });
+
+  const ctx = document.getElementById('growthChart').getContext('2d');
+  if (chart) chart.destroy();
+  chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: horizons.map(m => m + ' meses'),
+      datasets,
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: {
+          labels: { color: '#F2F1EC', font: { family: 'DM Sans', size: 11 }, boxWidth: 14 }
+        },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => ctx.dataset.label + ': ' + fmtBRL(ctx.parsed.y)
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { color: '#9A9DBE' }, grid: { color: '#242850' } },
+        y: {
+          ticks: {
+            color: '#9A9DBE',
+            callback: (v) => (v/1000000).toFixed(2) + 'M'
+          },
+          grid: { color: '#242850' }
+        }
+      }
+    }
+  });
+}
+
+document.getElementById('aporte').addEventListener('input', render);
+document.getElementById('horizonGroup').addEventListener('click', (e) => {
+  const btn = e.target.closest('.horizon-btn');
+  if (!btn) return;
+  document.querySelectorAll('.horizon-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentMonths = parseInt(btn.dataset.m);
+  render();
+});
+
+render();
+</script>
+</body>
+</html>
